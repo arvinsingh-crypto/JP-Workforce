@@ -1,3 +1,4 @@
 streamlit
 
-crewai[gemini]
+crewai[google-genai]
+

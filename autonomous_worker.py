@@ -15,12 +15,29 @@ google_sheet_url = "https://docs.google.com/spreadsheets/d/1WctigP3KR7NB7rGQJ3Rt
 
 print("🤖 Waking up the Jom-Plan Autonomous Worker...")
 
-# 2. Fetch the data
+# 2. Fetch and Segment the data
 try:
-    print("📥 Downloading latest data from Google Sheets...")
-    # INCREASED TO 500 to allow the AI to see long-term trends
-    df = pd.read_csv(google_sheet_url).tail(500) 
-    feedback_data = df.to_dict(orient='records')
+    print("📥 Downloading data from Google Sheets...")
+    df = pd.read_csv(google_sheet_url)
+    
+    # Standardize the timestamps
+    df['Timestamp'] = pd.to_datetime(df['Timestamp'], dayfirst=True, errors='coerce')
+    
+    # DATASET A: All-Time Historical Data (Capped at 1000 rows to ensure fast processing)
+    all_time_data = df.tail(1000).to_dict(orient='records')
+    
+    # DATASET B: Last 7 Days Data
+    seven_days_ago = pd.Timestamp.now() - pd.Timedelta(days=7)
+    recent_df = df[df['Timestamp'] >= seven_days_ago]
+    recent_data = recent_df.to_dict(orient='records')
+    
+    # Safety Catch
+    if recent_df.empty:
+        print("🛑 No new user feedback in the last 7 days. Exiting to save resources.")
+        exit(0)
+        
+    print(f"✅ Loaded {len(recent_data)} new entries for this week, and {len(all_time_data)} historical entries.")
+    
 except Exception as e:
     print(f"❌ Failed to read data: {e}")
     exit(1)
@@ -38,14 +55,18 @@ engineer = Agent(
 
 ceo = Agent(
     role="Operations Director",
-    goal="Translate the engineer's technical fix into a ready-to-use natural language prompt for the Replit AI Agent.",
-    backstory="You are a ruthless, efficient Operations Director. You know the human founder is not a coder and relies entirely on the Replit AI Agent to build Jom-Plan. Instead of giving the founder raw Python code that they won't know how to use, your job is to write the exact, comprehensive instruction prompt the founder should copy and paste into the Replit AI chat to implement the Engineer's fix.",
+    goal="Analyze raw user data for high-level business trends, and translate the engineer's technical fix into a Replit AI prompt.",
+    backstory="You are a ruthless, efficient Operations Director. You analyze user chat logs to identify the top friction points so the founder knows what is going wrong globally. Then, you take the Engineer's specific fix for the most critical issue and translate it into a copy-pasteable prompt for the Replit AI Agent.",
     llm=pro_llm
 )
 
 # 5. Define Tasks
 engineering_task = Task(
-    description=f"Review this feedback:\n\n{feedback_data}\n\n1. Identify the ONE most critical bug.\n2. Write a detailed technical summary of WHY it is happening.\n3. Write the exact Python code or Replit bash commands needed to fix it. \nNOTE: Output strictly in HTML (using <p>, <b>, and <pre> tags). DO NOT use Markdown.",
+    description=f"""Review the RECENT 7-day feedback:\n{recent_data}\n\nAnd the HISTORICAL context:\n{all_time_data}\n
+1. Identify the ONE most critical bug currently affecting users (prioritize the recent 7-day data).
+2. Write a detailed technical summary of WHY it is happening.
+3. Write the exact Python code or Replit bash commands needed to fix it.
+NOTE: Output strictly in HTML (using <p>, <b>, and <pre> tags). DO NOT use Markdown.""",
     expected_output="An HTML-formatted technical report with the bug cause and the raw code block to fix it.",
     agent=engineer
 )
@@ -53,19 +74,21 @@ engineering_task = Task(
 ceo_task = Task(
     description=f"""You have two jobs.
 
-First, deeply analyze the following raw user data for business intelligence:\n{feedback_data}
+First, deeply analyze the following raw user data for business intelligence. You have access to BOTH the all-time historical baseline and the recent 7-day data to spot shifts in user behavior:
+HISTORICAL DATA (All-Time Baseline):\n{all_time_data}
+RECENT DATA (Last 7 Days):\n{recent_data}
 
 Second, read the Engineer's technical fix.
 
 Draft an email to the Human Founder.
 RULES:
 1. Output strictly in valid HTML format (use <h2>, <ul>, <li>, <b>, <pre> tags). DO NOT use Markdown asterisks.
-2. Section 1: <h2>📈 Growth & Usage Trends</h2>. Analyze timestamps and unique emails to identify user activity spikes, new user engagement, or general usage patterns.
-3. Section 2: <h2>🗺️ Location & Market Trends</h2>. Identify the most popular geographical areas users are targeting (e.g., TRX, Penang, Subang) and what specific categories they are demanding (e.g., local food, halal, walking distance).
-4. Section 3: <h2>⚠️ Critical Friction Points</h2>. The top 2 to 3 systemic issues or bugs frustrating users based on the chat logs.
+2. Section 1: <h2>📈 Growth & Usage Trends</h2>. Analyze timestamps and unique emails to identify user activity spikes, new user engagement, or general usage patterns. Explicitly compare the recent 7-day data against the historical baseline to show growth or drop-offs.
+3. Section 2: <h2>🗺️ Location & Market Trends</h2>. Identify the most popular geographical areas users are targeting (e.g., TRX, Penang, Subang) and what specific categories they are demanding (e.g., local food, halal, walking distance). Note any new locations trending in the last 7 days compared to historical data.
+4. Section 3: <h2>⚠️ Critical Friction Points</h2>. Identify the top 2 to 3 systemic issues or bugs frustrating users, based heavily on the RECENT 7-day chat logs. Note if these are brand-new issues or recurring historical problems.
 5. Section 4: <h2>🛠️ Immediate Action (Replit Prompt)</h2>. Based on the Engineer's fix for the absolute worst bug, write a highly specific, natural language prompt that the founder can copy and paste into their Replit AI chat to fix it. Place this prompt inside a <pre style='background-color: #eee; padding: 10px; white-space: pre-wrap; font-family: monospace;'> tag.
 """,
-    expected_output="An HTML email containing a comprehensive business intelligence report, location trends, and a copy-pasteable Replit prompt.",
+    expected_output="An HTML email containing a comprehensive business intelligence report comparing historical vs recent trends, location analysis, and a copy-pasteable Replit prompt.",
     agent=ceo
 )
 

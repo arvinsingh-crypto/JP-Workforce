@@ -24,7 +24,12 @@ jobs:
       - name: Install Dependencies
         run: pip install -r requirements.txt # Installs CrewAI, Pandas, etc.
         
-      - name: Run Jom-Plan Autonomous Worker
+      -- name: Run Jom-Plan Autonomous Worker
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # Injects your secure key
-        run: python autonomous_worker.py # Executes your script
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+          RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+        run: python autonomous_worker.py
+        
+        

@@ -37,8 +37,8 @@ engineer = Agent(
 
 ceo = Agent(
     role="Operations Director",
-    goal="Summarize the engineer's fix into a highly concise, actionable HTML email for the human founder.",
-    backstory="You are a ruthless, efficient Operations Director. You distill technical problems into a 3-bullet-point summary and present the exact code required to fix it.",
+    goal="Translate the engineer's technical fix into a ready-to-use natural language prompt for the Replit AI Agent.",
+    backstory="You are a ruthless, efficient Operations Director. You know the human founder is not a coder and relies entirely on the Replit AI Agent to build Jom-Plan. Instead of giving the founder raw Python code that they won't know how to use, your job is to write the exact, comprehensive instruction prompt the founder should copy and paste into the Replit AI chat to implement the Engineer's fix.",
     llm=pro_llm
 )
 
@@ -50,8 +50,8 @@ engineering_task = Task(
 )
 
 ceo_task = Task(
-    description="Read the Engineer's fix. Draft an email to the Human Founder. \nRULES:\n1. Output strictly in valid HTML format (use <h2>, <ul>, <li>, <b>, <pre> tags). DO NOT use Markdown asterisks.\n2. Section 1: <h2>Executive Summary</h2>. Exactly 3 bullet points explaining the bug and its business impact.\n3. Section 2: <h2>Action Required (Replit Code)</h2>. Provide the Engineer's exact code fix inside a <pre> code block so the founder can copy/paste it.",
-    expected_output="A short, beautifully formatted HTML email containing a 3-bullet summary and the deployable code.",
+    description="Read the Engineer's fix. Draft an email to the Human Founder.\nRULES:\n1. Output strictly in valid HTML format (use <h2>, <ul>, <li>, <b>, <pre> tags). DO NOT use Markdown asterisks.\n2. Section 1: <h2>Executive Summary</h2>. Exactly 3 bullet points explaining the bug and its business impact.\n3. Section 2: <h2>Replit AI Prompt</h2>. Write a highly specific, natural language prompt that the founder can copy and paste into their Replit AI chat. This prompt must instruct the Replit AI exactly what code to write and where to put it, based entirely on the Engineer's technical solution. Place this prompt inside a <pre style='background-color: #eee; padding: 10px; white-space: pre-wrap;'> tag so it is easy to copy.",
+    expected_output="A short HTML email with a 3-bullet summary and a copy-pasteable prompt for the Replit AI Agent.",
     agent=ceo
 )
 

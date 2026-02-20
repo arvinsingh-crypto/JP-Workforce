@@ -66,20 +66,26 @@ print("📧 Drafting and sending the email to shareholders...")
 try:
     # Construct the email structure
     msg = MIMEMultipart()
-    msg['From'] = sender_email
+    
+    # HARDCODE THE ALIAS HERE (This is what the recipient sees)
+    msg['From'] = "Jom-Plan CEO <jomplanCEO@outsourcee.co>" 
     msg['To'] = receiver_email
     msg['Subject'] = "🚀 Jom-Plan Executive Update: Weekly Technical Report"
 
-    # Attach the AI's raw output as the body of the email
+    # Attach the AI's raw output
     body = f"Please find the latest automated C-Suite report below:\n\n{result.raw}"
     msg.attach(MIMEText(body, 'plain'))
 
     # Connect to Gmail's server and send
     server = smtplib.SMTP('smtp.gmail.com', 587)
     server.starttls()
-    server.login(sender_email, sender_password)
+    
+    # 1. Login using your MAIN account (arvin.singh@...)
+    server.login(sender_email, sender_password) 
     text = msg.as_string()
-    server.sendmail(sender_email, receiver_email, text)
+    
+    # 2. Send the email disguised as the ALIAS
+    server.sendmail("jomplanCEO@outsourcee.co", receiver_email, text) 
     server.quit()
     
     print("✅ Email successfully sent to inbox!")

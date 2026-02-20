@@ -30,28 +30,28 @@ pro_llm = LLM(model="gemini/gemini-3.1-pro-preview", api_key=api_key)
 # 4. Define Workforce
 engineer = Agent(
     role="Lead Systems Engineer",
-    goal="Analyze raw user feedback data, identify the most critical systemic issues, and propose Replit-compatible technical roadmaps.",
-    backstory="You are a senior technical architect for Jom-Plan. You know the tech stack is hosted on Replit using Python.",
+    goal="Identify the single most critical app bug from the feedback, explain the technical root cause, and write the exact Replit Python code to fix it.",
+    backstory="You are a senior Replit developer. You don't write generic advice; you write actual, deployable Python code. You focus on solving one critical problem at a time perfectly.",
     llm=pro_llm
 )
 
 ceo = Agent(
-    role="Chief Executive Officer",
-    goal="Translate technical realities into strategic shareholder recommendations.",
-    backstory="You are the visionary CEO of Jom-Plan. You take technical reports from your engineer and decide which fixes make the most business sense.",
+    role="Operations Director",
+    goal="Summarize the engineer's fix into a highly concise, actionable HTML email for the human founder.",
+    backstory="You are a ruthless, efficient Operations Director. You distill technical problems into a 3-bullet-point summary and present the exact code required to fix it.",
     llm=pro_llm
 )
 
 # 5. Define Tasks
 engineering_task = Task(
-    description=f"Analyze this live dataset of Jom-Plan user feedback:\n\n{feedback_data}\n\nCategorize the feedback to find the top systemic issue. Provide a step-by-step technical execution plan for a Replit environment.",
-    expected_output="A structured Consolidated Technical Review with proposed Replit-specific technical solutions.",
+    description=f"Review this feedback:\n\n{feedback_data}\n\n1. Identify the ONE most critical bug.\n2. Write a detailed technical summary of WHY it is happening.\n3. Write the exact Python code or Replit bash commands needed to fix it. \nNOTE: Output strictly in HTML (using <p>, <b>, and <pre> tags). DO NOT use Markdown.",
+    expected_output="An HTML-formatted technical report with the bug cause and the raw code block to fix it.",
     agent=engineer
 )
 
 ceo_task = Task(
-    description="Read the Engineer's Technical Review. Draft a formal memorandum to the Jom-Plan Shareholders recommending which fixes we should prioritize.",
-    expected_output="A formal, professional Shareholder Memorandum.",
+    description="Read the Engineer's fix. Draft an email to the Human Founder. \nRULES:\n1. Output strictly in valid HTML format (use <h2>, <ul>, <li>, <b>, <pre> tags). DO NOT use Markdown asterisks.\n2. Section 1: <h2>Executive Summary</h2>. Exactly 3 bullet points explaining the bug and its business impact.\n3. Section 2: <h2>Action Required (Replit Code)</h2>. Provide the Engineer's exact code fix inside a <pre> code block so the founder can copy/paste it.",
+    expected_output="A short, beautifully formatted HTML email containing a 3-bullet summary and the deployable code.",
     agent=ceo
 )
 
@@ -61,34 +61,62 @@ jom_plan_crew = Crew(agents=[engineer, ceo], tasks=[engineering_task, ceo_task],
 result = jom_plan_crew.kickoff()
 
 # --- NEW: STEP 7. THE EMAIL SENDER ---
-print("📧 Drafting and sending the email to shareholders...")
+print("📧 Drafting and sending the email to the Founder...")
 
 try:
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    import smtplib
+
     # Construct the email structure
     msg = MIMEMultipart()
     
     # HARDCODE THE ALIAS HERE (This is what the recipient sees)
     msg['From'] = "Jom-Plan CEO <jomplanCEO@outsourcee.co>" 
     msg['To'] = receiver_email
-    msg['Subject'] = "🚀 Jom-Plan Executive Update: Weekly Technical Report"
+    msg['Subject'] = "🚀 Jom-Plan Operations Brief: Critical Fixes"
 
-    # Attach the AI's raw output
-    body = f"Please find the latest automated C-Suite report below:\n\n{result.raw}"
-    msg.attach(MIMEText(body, 'plain'))
+    # Grab the Engineer's isolated report to put in the appendix
+    engineer_report = engineering_task.output.raw
+
+    # Construct the beautifully formatted HTML email body
+    body = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 800px; margin: auto;">
+        
+        <h1 style="color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px;">Jom-Plan Operations Brief</h1>
+        {result.raw}
+        
+        <br><br>
+        
+        <div style="background-color: #f8f9fa; border-left: 4px solid #6c757d; padding: 20px; margin-top: 30px;">
+            <h3 style="color: #495057; margin-top: 0;">🔬 Technical Appendix: Engineering Deep-Dive</h3>
+            <p style="font-size: 0.9em; color: #666;">The following is the raw, detailed diagnostic report provided by the Lead Systems Engineer for your review:</p>
+            <div style="font-size: 0.95em;">
+                {engineer_report}
+            </div>
+        </div>
+        
+      </body>
+    </html>
+    """
+    
+    # Attach the HTML body (Notice it says 'html' now, not 'plain')
+    msg.attach(MIMEText(body, 'html'))
 
     # Connect to Gmail's server and send
     server = smtplib.SMTP('smtp.gmail.com', 587)
     server.starttls()
     
-    # 1. Login using your MAIN account (arvin.singh@...)
+    # Login using your MAIN account (arvin.singh@...)
     server.login(sender_email, sender_password) 
     text = msg.as_string()
     
-    # 2. Send the email disguised as the ALIAS
+    # Send the email disguised as the ALIAS
     server.sendmail("jomplanCEO@outsourcee.co", receiver_email, text) 
     server.quit()
     
-    print("✅ Email successfully sent to inbox!")
+    print("✅ HTML Email successfully sent to inbox!")
 
 except Exception as e:
     print(f"❌ Failed to send email. Error: {e}")

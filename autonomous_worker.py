@@ -18,7 +18,8 @@ print("🤖 Waking up the Jom-Plan Autonomous Worker...")
 # 2. Fetch the data
 try:
     print("📥 Downloading latest data from Google Sheets...")
-    df = pd.read_csv(google_sheet_url).tail(50)
+    # INCREASED TO 500 to allow the AI to see long-term trends
+    df = pd.read_csv(google_sheet_url).tail(500) 
     feedback_data = df.to_dict(orient='records')
 except Exception as e:
     print(f"❌ Failed to read data: {e}")
@@ -50,8 +51,21 @@ engineering_task = Task(
 )
 
 ceo_task = Task(
-    description="Read the Engineer's fix. Draft an email to the Human Founder.\nRULES:\n1. Output strictly in valid HTML format (use <h2>, <ul>, <li>, <b>, <pre> tags). DO NOT use Markdown asterisks.\n2. Section 1: <h2>Executive Summary</h2>. Exactly 3 bullet points explaining the bug and its business impact.\n3. Section 2: <h2>Replit AI Prompt</h2>. Write a highly specific, natural language prompt that the founder can copy and paste into their Replit AI chat. This prompt must instruct the Replit AI exactly what code to write and where to put it, based entirely on the Engineer's technical solution. Place this prompt inside a <pre style='background-color: #eee; padding: 10px; white-space: pre-wrap;'> tag so it is easy to copy.",
-    expected_output="A short HTML email with a 3-bullet summary and a copy-pasteable prompt for the Replit AI Agent.",
+    description=f"""You have two jobs.
+
+First, deeply analyze the following raw user data for business intelligence:\n{feedback_data}
+
+Second, read the Engineer's technical fix.
+
+Draft an email to the Human Founder.
+RULES:
+1. Output strictly in valid HTML format (use <h2>, <ul>, <li>, <b>, <pre> tags). DO NOT use Markdown asterisks.
+2. Section 1: <h2>📈 Growth & Usage Trends</h2>. Analyze timestamps and unique emails to identify user activity spikes, new user engagement, or general usage patterns.
+3. Section 2: <h2>🗺️ Location & Market Trends</h2>. Identify the most popular geographical areas users are targeting (e.g., TRX, Penang, Subang) and what specific categories they are demanding (e.g., local food, halal, walking distance).
+4. Section 3: <h2>⚠️ Critical Friction Points</h2>. The top 2 to 3 systemic issues or bugs frustrating users based on the chat logs.
+5. Section 4: <h2>🛠️ Immediate Action (Replit Prompt)</h2>. Based on the Engineer's fix for the absolute worst bug, write a highly specific, natural language prompt that the founder can copy and paste into their Replit AI chat to fix it. Place this prompt inside a <pre style='background-color: #eee; padding: 10px; white-space: pre-wrap; font-family: monospace;'> tag.
+""",
+    expected_output="An HTML email containing a comprehensive business intelligence report, location trends, and a copy-pasteable Replit prompt.",
     agent=ceo
 )
 

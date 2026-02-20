@@ -39,8 +39,9 @@ if st.button("Generate Consolidated Report"):
             # 3. Define the Workforce
             engineer = Agent(
                 role="Lead Systems Engineer",
-                goal="Analyze raw user feedback data, identify the most critical systemic issues, and propose technical roadmaps.",
-                backstory="You are a senior technical architect for Jom-Plan, a Malaysian day planner app. You don't just fix single bugs; you look at the big picture of app stability, data trends, and user frustration.",
+                goal="Analyze raw user feedback data, identify the most critical systemic issues, and propose Replit-compatible technical roadmaps.",
+                # NEW REPLIT-AWARE BACKSTORY:
+                backstory="You are a senior technical architect for Jom-Plan. Crucially, you know that the entire Jom-Plan application is built, hosted, and deployed natively on Replit using Python. When you propose technical fixes, you must provide solutions, code snippets, and terminal commands that are specifically designed to be executed within the Replit cloud IDE environment.",
                 llm=pro_llm,
                 verbose=True
             )
@@ -48,7 +49,8 @@ if st.button("Generate Consolidated Report"):
             ceo = Agent(
                 role="Chief Executive Officer",
                 goal="Translate technical realities into strategic shareholder recommendations.",
-                backstory="You are the visionary CEO of Jom-Plan. You take technical reports from your engineer and decide which fixes make the most business sense to present to the board of directors.",
+                # NEW REPLIT-AWARE BACKSTORY:
+                backstory="You are the visionary CEO of Jom-Plan. You know the tech stack is hosted on Replit, which allows for rapid, agile deployment. You take technical reports from your engineer and decide which fixes make the most business sense to present to the board of directors.",
                 llm=pro_llm,
                 verbose=True
             )
@@ -82,3 +84,4 @@ if st.button("Generate Consolidated Report"):
             
             with st.expander("View the Engineer's Raw Technical Data"):
                 st.write(engineering_task.output.raw)
+

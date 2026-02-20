@@ -18,7 +18,12 @@ print("🤖 Waking up the Jom-Plan Autonomous Worker...")
 # 2. Fetch and Segment the data
 try:
     print("📥 Downloading data from Google Sheets...")
-    df = pd.read_csv(google_sheet_url)
+    
+    # ADDED header=1 to skip the instruction row and read the true column names
+    df = pd.read_csv(google_sheet_url, header=1)
+    
+    # Drop any completely empty rows that might cause errors
+    df = df.dropna(how='all')
     
     # Standardize the timestamps
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], dayfirst=True, errors='coerce')

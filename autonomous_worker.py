@@ -52,48 +52,61 @@ pro_llm = LLM(model="gemini/gemini-3.1-pro-preview", api_key=api_key)
 
 # 4. Define Workforce
 engineer = Agent(
-    role="Lead Systems Engineer",
-    goal="Identify the single most critical app bug from the feedback, explain the technical root cause, and write the exact Replit Python code to fix it.",
-    backstory="You are a senior Replit developer. You don't write generic advice; you write actual, deployable Python code. You focus on solving one critical problem at a time perfectly.",
+    role="Lead Full-Stack TypeScript Engineer",
+    goal="Identify all critical app bugs from the feedback, explain their technical root causes, and write the exact TypeScript/React/Express architectural fixes.",
+    backstory="""You are the Lead Full-Stack Engineer for JomPlan.
+    CRITICAL ARCHITECTURE RULES:
+    - Full-stack TypeScript web app.
+    - Frontend: React 18, Vite, Tailwind CSS, shadcn/ui, Wouter routing.
+    - Backend: Express API with Drizzle ORM on PostgreSQL (Neon-backed).
+    - Auth: Replit OIDC.
+    - AI Pipeline: User message -> GPT-4o-mini intent extraction -> Google Places API discovery -> Haversine distance filtering (1.5km walking / 8km default) -> top 5 places injected into GPT prompt -> structured JSON itinerary response.
+    You write deployable TypeScript code, database schemas, and architectural solutions that perfectly fit this exact stack. You handle multi-file refactors with consistency.""",
     llm=pro_llm
 )
 
 ceo = Agent(
-    role="Operations Director",
-    goal="Analyze raw user data for high-level business trends, and translate the engineer's technical fix into a Replit AI prompt.",
-    backstory="You are a ruthless, efficient Operations Director. You analyze user chat logs to identify the top friction points so the founder knows what is going wrong globally. Then, you take the Engineer's specific fix for the most critical issue and translate it into a copy-pasteable prompt for the Replit AI Agent.",
+    role="Operations Director & CEO",
+    goal="Analyze business trends, provide comprehensive 'Session Plan' Replit prompts for all critical issues, and offer proactive product suggestions.",
+    backstory="You are a strategic CEO. You analyze user chat logs to identify all major friction points and proactive feature opportunities. You take the Engineer's fixes and translate them into highly specific 'Session Plan' prompts designed specifically for the Replit AI agent. You know Replit responds best to specific scopes, file references, and strict acceptance criteria.",
     llm=pro_llm
 )
 
 # 5. Define Tasks
 engineering_task = Task(
     description=f"""Review the RECENT 7-day feedback:\n{recent_data}\n\nAnd the HISTORICAL context:\n{all_time_data}\n
-1. Identify the ONE most critical bug currently affecting users (prioritize the recent 7-day data).
-2. Write a detailed technical summary of WHY it is happening.
-3. Write the exact Python code or Replit bash commands needed to fix it.
-NOTE: Output strictly in HTML (using <p>, <b>, and <pre> tags). DO NOT use Markdown.""",
-    expected_output="An HTML-formatted technical report with the bug cause and the raw code block to fix it.",
+1. Identify ALL critical bugs or systemic friction points currently affecting users.
+2. For EACH issue, write a detailed technical summary of the root cause based on our React/Express/PostgreSQL/Google Places architecture.
+3. For EACH issue, write the exact TypeScript code, Drizzle ORM schema changes, or UI component logic needed to fix it.
+NOTE: Output strictly in HTML (using <h2>, <h3>, <p>, <b>, and <pre> tags). DO NOT use Markdown.""",
+    expected_output="An HTML-formatted technical report detailing the root causes and raw TypeScript code fixes for ALL identified critical issues.",
     agent=engineer
 )
 
 ceo_task = Task(
-    description=f"""You have two jobs.
+    description=f"""You have three jobs.
 
-First, deeply analyze the following raw user data for business intelligence. You have access to BOTH the all-time historical baseline and the recent 7-day data to spot shifts in user behavior:
-HISTORICAL DATA (All-Time Baseline):\n{all_time_data}
-RECENT DATA (Last 7 Days):\n{recent_data}
+First, analyze the data for business intelligence:
+HISTORICAL DATA:\n{all_time_data}
+RECENT DATA:\n{recent_data}
 
-Second, read the Engineer's technical fix.
+Second, read the Engineer's technical fixes for ALL critical issues.
+Third, identify proactive feature suggestions based on user desires.
 
 Draft an email to the Human Founder.
 RULES:
-1. Output strictly in valid HTML format (use <h2>, <ul>, <li>, <b>, <pre> tags). DO NOT use Markdown asterisks.
-2. Section 1: <h2>📈 Growth & Usage Trends</h2>. Analyze timestamps and unique emails to identify user activity spikes, new user engagement, or general usage patterns. Explicitly compare the recent 7-day data against the historical baseline to show growth or drop-offs.
-3. Section 2: <h2>🗺️ Location & Market Trends</h2>. Identify the most popular geographical areas users are targeting (e.g., TRX, Penang, Subang) and what specific categories they are demanding (e.g., local food, halal, walking distance). Note any new locations trending in the last 7 days compared to historical data.
-4. Section 3: <h2>⚠️ Critical Friction Points</h2>. Identify the top 2 to 3 systemic issues or bugs frustrating users, based heavily on the RECENT 7-day chat logs. Note if these are brand-new issues or recurring historical problems.
-5. Section 4: <h2>🛠️ Immediate Action (Replit Prompt)</h2>. Based on the Engineer's fix for the absolute worst bug, write a highly specific, natural language prompt that the founder can copy and paste into their Replit AI chat to fix it. Place this prompt inside a <pre style='background-color: #eee; padding: 10px; white-space: pre-wrap; font-family: monospace;'> tag.
+1. Output strictly in valid HTML format (use <h2>, <h3>, <ul>, <li>, <b>, <pre> tags). DO NOT use Markdown asterisks.
+2. Section 1: <h2>📈 Growth & Usage Trends</h2>. Compare recent 7-day data against historical data.
+3. Section 2: <h2>🗺️ Location & Market Trends</h2>. Note any new locations trending.
+4. Section 3: <h2>⚠️ Critical Friction Points</h2>. Detail ALL top issues based on recent chat logs.
+5. Section 4: <h2>🛠️ Replit Session Plans (Action Required)</h2>. For EACH bug identified by the Engineer, write a highly specific "Session Plan" prompt for the Replit AI. Each prompt must include:
+   - Specific scope (what to change and where)
+   - Acceptance criteria ("when X happens, Y should be the result")
+   - Constraints ("keep backward compatible", "don't break existing UI").
+   Place EACH Session Plan prompt inside its own <pre style='background-color: #eee; padding: 10px; white-space: pre-wrap; font-family: monospace; margin-bottom: 15px;'> tag so the founder can copy and paste them sequentially.
+6. Section 5: <h2>💡 Proactive Product Suggestions</h2>. Based on the user data, suggest 2-3 new features, data pipeline improvements, or UX enhancements the team should build next to delight users.
 """,
-    expected_output="An HTML email containing a comprehensive business intelligence report comparing historical vs recent trends, location analysis, and a copy-pasteable Replit prompt.",
+    expected_output="An HTML email containing business trends, multiple detailed Replit Session Plan prompts for all bugs, and proactive product suggestions.",
     agent=ceo
 )
 

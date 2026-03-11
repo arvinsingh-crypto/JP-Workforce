@@ -3,4 +3,5 @@ crewai[google-genai]
 pandas
 gspread
 oauth2client
+crewai-tools
 

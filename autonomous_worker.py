@@ -1,34 +1,38 @@
 import os
+import json
 import pandas as pd
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from crewai import Agent, Task, Crew, Process, LLM
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
-# 1. Securely fetch ALL keys from GitHub Secrets
-api_key = os.environ.get("GEMINI_API_KEY")
-sender_email = os.environ.get("SENDER_EMAIL")
-sender_password = os.environ.get("SENDER_PASSWORD")
-receiver_email = os.environ.get("RECEIVER_EMAIL")
-
-google_sheet_url = "https://docs.google.com/spreadsheets/d/1WctigP3KR7NB7rGQJ3RtZNAJCcvWeeYsBLd52Osfirg/export?format=csv&gid=0"
-
-print("🤖 Waking up the Jom-Plan Autonomous Worker...")
-
-# 2. Fetch and Segment the data
+# 1. Authenticate the Robot Employee
 try:
-    print("📥 Downloading data from Google Sheets...")
+    print("🔐 Authenticating with Google Cloud...")
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds_dict = json.loads(os.environ.get("GOOGLE_CREDENTIALS_JSON"))
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    client = gspread.authorize(creds)
+except Exception as e:
+    print(f"❌ Authentication Failed: {e}")
+    exit(1)
+
+# 2. Fetch Data Securely
+try:
+    print("📥 Downloading secure data from Google Sheets...")
     
-    # ADDED header=1 to skip the instruction row and read the true column names
-    df = pd.read_csv(google_sheet_url, header=1)
+    # Extract the ID from your Google Sheet URL (the part between /d/ and /edit)
+    jomplan_sheet_id = "YOUR_SPREADSHEET_ID_HERE" 
     
-    # Drop any completely empty rows that might cause errors
-    df = df.dropna(how='all')
+    # Open the sheet and grab the data
+    sheet = client.open_by_key(jomplan_sheet_id).sheet1
+    data = sheet.get_all_records()
     
-    # Standardize the timestamps
+    # Convert to Pandas DataFrame
+    df = pd.DataFrame(data)
+    
+    # Standardize timestamps (keeping your exact logic)
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], dayfirst=True, errors='coerce')
     
-    # DATASET A: All-Time Historical Data (Capped at 1000 rows to ensure fast processing)
+    # DATASET A: All-Time Historical Data
     all_time_data = df.tail(1000).to_dict(orient='records')
     
     # DATASET B: Last 7 Days Data
@@ -36,15 +40,14 @@ try:
     recent_df = df[df['Timestamp'] >= seven_days_ago]
     recent_data = recent_df.to_dict(orient='records')
     
-    # Safety Catch
     if recent_df.empty:
         print("🛑 No new user feedback in the last 7 days. Exiting to save resources.")
         exit(0)
         
-    print(f"✅ Loaded {len(recent_data)} new entries for this week, and {len(all_time_data)} historical entries.")
+    print(f"✅ Securely loaded {len(recent_data)} new entries.")
     
 except Exception as e:
-    print(f"❌ Failed to read data: {e}")
+    print(f"❌ Failed to read secure data: {e}")
     exit(1)
 
 # 3. Configure the Brain

@@ -75,11 +75,12 @@ ceo = Agent(
 # 5. Define Tasks
 engineering_task = Task(
     description=f"""Review the RECENT 7-day feedback:\n{recent_data}\n\nAnd the HISTORICAL context:\n{all_time_data}\n
-1. Identify ALL critical bugs or systemic friction points currently affecting users.
-2. For EACH issue, write a detailed technical summary of the root cause based on our React/Express/PostgreSQL/Google Places architecture.
-3. For EACH issue, write the exact TypeScript code, Drizzle ORM schema changes, or UI component logic needed to fix it.
-NOTE: Output strictly in HTML (using <h2>, <h3>, <p>, <b>, and <pre> tags). DO NOT use Markdown.""",
-    expected_output="An HTML-formatted technical report detailing the root causes and raw TypeScript code fixes for ALL identified critical issues.",
+Your job is to identify critical bugs and prevent repeating past advice.
+1. Cross-reference the data. Isolate issues that are BRAND NEW (only in the last 7 days) versus PERSISTENT (occurring in both historical and recent data).
+2. For BRAND NEW issues, provide the standard technical root cause and the best TypeScript/Node.js code fix.
+3. For PERSISTENT issues, explicitly state that this is a recurring problem. Assume your previous standard recommendations (e.g., basic Haversine filtering, standard intent extraction) have either failed or are insufficient. You MUST brainstorm and provide a completely NEW, advanced, or alternative architectural approach to solve it.
+NOTE: Output strictly in HTML (using <h2>, <h3>, <p>, <b>, and <pre> tags). Categorize your report clearly into "Brand New Issues" and "Persistent Issues". DO NOT use Markdown.""",
+    expected_output="An HTML technical report categorizing bugs into New vs. Persistent, providing standard fixes for new bugs and advanced/alternative fixes for recurring ones.",
     agent=engineer
 )
 
@@ -90,7 +91,7 @@ First, analyze the data for business intelligence:
 HISTORICAL DATA:\n{all_time_data}
 RECENT DATA:\n{recent_data}
 
-Second, read the Engineer's technical fixes for ALL critical issues.
+Second, read the Engineer's technical report. Pay special attention to their categorization of "Brand New" vs "Persistent" issues.
 Third, identify proactive feature suggestions based on user desires.
 
 Draft an email to the Human Founder.
@@ -98,15 +99,11 @@ RULES:
 1. Output strictly in valid HTML format (use <h2>, <h3>, <ul>, <li>, <b>, <pre> tags). DO NOT use Markdown asterisks.
 2. Section 1: <h2>📈 Growth & Usage Trends</h2>. Compare recent 7-day data against historical data.
 3. Section 2: <h2>🗺️ Location & Market Trends</h2>. Note any new locations trending.
-4. Section 3: <h2>⚠️ Critical Friction Points</h2>. Detail ALL top issues based on recent chat logs.
-5. Section 4: <h2>🛠️ Replit Session Plans (Action Required)</h2>. For EACH bug identified by the Engineer, write a highly specific "Session Plan" prompt for the Replit AI. Each prompt must include:
-   - Specific scope (what to change and where)
-   - Acceptance criteria ("when X happens, Y should be the result")
-   - Constraints ("keep backward compatible", "don't break existing UI").
-   Place EACH Session Plan prompt inside its own <pre style='background-color: #eee; padding: 10px; white-space: pre-wrap; font-family: monospace; margin-bottom: 15px;'> tag so the founder can copy and paste them sequentially.
-6. Section 5: <h2>💡 Proactive Product Suggestions</h2>. Based on the user data, suggest 2-3 new features, data pipeline improvements, or UX enhancements the team should build next to delight users.
+4. Section 3: <h2>⚠️ Critical Friction Points (Timeline Analysis)</h2>. Detail the top issues based on the Engineer's report. You MUST clearly highlight if an issue is a "New Fire" from this week, or a "Persistent Issue" that is still happening despite past efforts. 
+5. Section 4: <h2>🛠️ Replit Session Plans (Action Required)</h2>. For EACH bug, write a highly specific "Session Plan" prompt for the Replit AI. For "Persistent Issues," ensure the Session Plan explicitly commands the Replit AI to try the Engineer's *new, alternative* solution rather than the standard fix. Place each prompt inside a <pre style='background-color: #eee; padding: 10px; white-space: pre-wrap; font-family: monospace; margin-bottom: 15px;'> tag.
+6. Section 5: <h2>💡 Proactive Product Suggestions</h2>. Based on the user data, suggest 2-3 new features or UX enhancements to build next.
 """,
-    expected_output="An HTML email containing business trends, multiple detailed Replit Session Plan prompts for all bugs, and proactive product suggestions.",
+    expected_output="An HTML email containing business trends, a timeline-aware friction analysis, Replit Session Plans (with alternative solutions for recurring bugs), and proactive product suggestions.",
     agent=ceo
 )
 

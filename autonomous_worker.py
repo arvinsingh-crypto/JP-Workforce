@@ -17,21 +17,42 @@ except Exception as e:
 
 # 2. Fetch Data Securely
 try:
-    print("📥 Downloading secure data from Google Sheets...")
+    print("📥 Downloading SECURE data from Google Sheets...")
     
+    # PUT YOUR EXACT SPREADSHEET ID HERE
     jomplan_sheet_id = "YOUR_SPREADSHEET_ID_HERE" 
-    sheet = client.open_by_key(jomplan_sheet_id).sheet1
     
-    # ADDED head=2 to skip the instruction row and read the true column names on Row 2
-    data = sheet.get_all_records(head=2) 
+    # Open the sheet and grab the data (head=2 skips row 1 instructions)
+    sheet = client.open_by_key(jomplan_sheet_id).sheet1
+    data = sheet.get_all_records(head=2)
     
     # Convert to Pandas DataFrame
     df = pd.DataFrame(data)
     
+    # SAFETY NET: This removes any accidental blank spaces in your Google Sheet column headers
+    df.columns = df.columns.str.strip()
+    
     # Standardize timestamps
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], dayfirst=True, errors='coerce')
     
-    # ... (Keep the rest of your filtering logic exactly the same) ...
+    # DATASET A: All-Time Historical Data
+    all_time_data = df.tail(1000).to_dict(orient='records')
+    
+    # DATASET B: Last 7 Days Data
+    seven_days_ago = pd.Timestamp.now() - pd.Timedelta(days=7)
+    recent_df = df[df['Timestamp'] >= seven_days_ago]
+    recent_data = recent_df.to_dict(orient='records')
+    
+    if recent_df.empty:
+        print("🛑 No new user feedback in the last 7 days. Exiting to save resources.")
+        exit(0)
+        
+    print(f"✅ Securely loaded {len(recent_data)} new entries.")
+    
+except Exception as e:
+    print(f"❌ Failed to read secure data: {e}")
+    print(f"🔍 DEBUG - The columns Python sees are: {df.columns.tolist() if 'df' in locals() else 'None'}")
+    exit(1)
 
 # 3. Configure the Brain
 pro_llm = LLM(model="gemini/gemini-3.1-pro-preview", api_key=api_key)

@@ -40,8 +40,8 @@ search_tool = SerperDevTool()
 # 3. Define the Dual-Engine Sales Team
 prospector = Agent(
     role="Lead Generation Specialist",
-    goal="Use Google Search to find businesses that match the EXACT niche requested by the human.",
-    backstory="You are an expert internet researcher working for JomPlan, a personalized travel and itinerary app. When given a target niche, you NEVER guess or assume. You search strictly for that specific industry.",
+    goal="Find actual, literal businesses that perfectly match the human's requested niche.",
+    backstory="You are a ruthless, highly literal internet researcher. You never assume, you never pivot, and you never guess. If a human asks for 'Hotels', you find literal buildings where people sleep. You never substitute the request with agencies, consultants, or related industries.",
     tools=[search_tool],
     llm=pro_llm
 )
@@ -70,13 +70,12 @@ for index, row in enumerate(records, start=2):
         print(f"🕵️‍♂️ Prospecting new leads for: {lead_name}")
         
         prospect_task = Task(
-            description=f"""Search the web for 3 real businesses in this EXACT industry/niche: '{lead_name}'. 
+            description=f"""Search the web for 3 real businesses that perfectly match this literal description: '{lead_name}'. 
             Location/Context: '{context}'. 
             
             CRITICAL RULES:
-            1. You MUST search for exactly what is requested in the niche: '{lead_name}'. Do NOT search for logistics or generic B2B companies.
-            2. JomPlan is a travel/itinerary platform. Keep that in mind when summarizing what the business does.
-            3. GEOGRAPHY: If the Location/Context is blank, default your search strictly to Malaysia.
+            1. BE LITERAL: If the requested niche is '{lead_name}', you MUST return exactly that. If it says 'Luxury Hotel', you must return actual hotel brands (e.g., Shangri-La, Ritz-Carlton), NOT travel agencies, NOT tour guides, and NOT booking platforms like Agoda.
+            2. GEOGRAPHY: If the Location/Context is blank, default your search strictly to Malaysia.
             
             For each business, find their official website.
             Format your exact output as 3 distinct lines, separated by a pipe (|), like this:

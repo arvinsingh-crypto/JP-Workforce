@@ -19,36 +19,19 @@ except Exception as e:
 try:
     print("📥 Downloading secure data from Google Sheets...")
     
-    # Extract the ID from your Google Sheet URL (the part between /d/ and /edit)
     jomplan_sheet_id = "YOUR_SPREADSHEET_ID_HERE" 
-    
-    # Open the sheet and grab the data
     sheet = client.open_by_key(jomplan_sheet_id).sheet1
-    data = sheet.get_all_records()
+    
+    # ADDED head=2 to skip the instruction row and read the true column names on Row 2
+    data = sheet.get_all_records(head=2) 
     
     # Convert to Pandas DataFrame
     df = pd.DataFrame(data)
     
-    # Standardize timestamps (keeping your exact logic)
+    # Standardize timestamps
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], dayfirst=True, errors='coerce')
     
-    # DATASET A: All-Time Historical Data
-    all_time_data = df.tail(1000).to_dict(orient='records')
-    
-    # DATASET B: Last 7 Days Data
-    seven_days_ago = pd.Timestamp.now() - pd.Timedelta(days=7)
-    recent_df = df[df['Timestamp'] >= seven_days_ago]
-    recent_data = recent_df.to_dict(orient='records')
-    
-    if recent_df.empty:
-        print("🛑 No new user feedback in the last 7 days. Exiting to save resources.")
-        exit(0)
-        
-    print(f"✅ Securely loaded {len(recent_data)} new entries.")
-    
-except Exception as e:
-    print(f"❌ Failed to read secure data: {e}")
-    exit(1)
+    # ... (Keep the rest of your filtering logic exactly the same) ...
 
 # 3. Configure the Brain
 pro_llm = LLM(model="gemini/gemini-3.1-pro-preview", api_key=api_key)

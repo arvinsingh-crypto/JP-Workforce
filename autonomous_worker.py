@@ -8,6 +8,12 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+# Fetch Secrets from GitHub
+api_key = os.environ.get("GEMINI_API_KEY")
+sender_email = os.environ.get("SENDER_EMAIL")
+sender_password = os.environ.get("SENDER_PASSWORD")
+receiver_email = os.environ.get("RECEIVER_EMAIL")
+
 # 1. Authenticate the Robot Employee
 try:
     print("🔐 Authenticating with Google Cloud...")

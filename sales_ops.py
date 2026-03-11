@@ -3,17 +3,22 @@ import json
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from crewai import Agent, Task, Crew, Process, LLM
+from crewai_tools import SerperDevTool
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import pandas as pd
 
 # Fetch Secrets
 api_key = os.environ.get("GEMINI_API_KEY")
+serper_key = os.environ.get("SERPER_API_KEY")
 sender_email = os.environ.get("SENDER_EMAIL")
 sender_password = os.environ.get("SENDER_PASSWORD")
 receiver_email = os.environ.get("RECEIVER_EMAIL")
 
-# 1. Authenticate the Sales Robot
+os.environ["SERPER_API_KEY"] = serper_key
+
+# 1. Authenticate with Google Cloud
 try:
     print("🔐 Authenticating Sales Ops with Google Cloud...")
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -25,85 +30,125 @@ except Exception as e:
     exit(1)
 
 # 2. Connect to the Sales CRM
-sales_sheet_id = "1J0Xy0tBC0-Tp7o-PAQL5F5eMdaAqSjcYQzA0jR2yrus"
+sales_sheet_id = "YOUR_SALES_SPREADSHEET_ID_HERE" 
 sheet = client.open_by_key(sales_sheet_id).sheet1
 records = sheet.get_all_records()
 
 pro_llm = LLM(model="gemini/gemini-3.1-pro-preview", api_key=api_key)
+search_tool = SerperDevTool()
 
-# 3. Define the Sales Agent
-sales_rep = Agent(
-    role="B2B Sales Operations Specialist",
-    goal="Analyze prospective leads, extract key business value, and write highly personalized cold emails.",
-    backstory="You are the elite Sales Ops Lead for Jom-Plan. You excel at looking at a company's basic information and figuring out exactly how Jom-Plan's services can provide them value. Your cold emails are punchy, polite, and strictly focused on solving the prospect's problems.",
+# 3. Define the Dual-Engine Sales Team
+prospector = Agent(
+    role="Lead Generation Specialist",
+    goal="Use Google Search to find highly relevant B2B business leads for Jom-Plan based on a broad target niche.",
+    backstory="You are an expert at finding hidden gems on the internet. You search for actual, currently operating businesses, find their official websites, and summarize what they do.",
+    tools=[search_tool],
     llm=pro_llm
 )
 
-processed_count = 0
+sales_rep = Agent(
+    role="B2B Sales Operations Specialist",
+    goal="Research specific companies, assess their viability as a Jom-Plan partner, and write highly personalized cold emails.",
+    backstory="You are the elite Sales Ops Lead for Jom-Plan. You deeply research a prospect before reaching out. You assess if they are a good fit (Viability), and your emails are punchy, polite, and strictly focused on solving their specific problems.",
+    tools=[search_tool],
+    llm=pro_llm
+)
 
-# 4. Loop through the CRM and process "New" leads
-print("🔍 Scanning CRM for New Leads...")
-# Start at row 2 because row 1 is headers
+drafted_count = 0
+found_leads_count = 0
+
+print("🔍 Scanning CRM for Tasks...")
+
+# 4. Loop through the CRM
 for index, row in enumerate(records, start=2):
-    if row.get('Status', '').strip().lower() == 'new':
-        lead_name = row.get('Company / Lead Name', 'Unknown Company')
-        context = row.get('Website or Context', 'No context provided')
+    status = str(row.get('Status', '')).strip().lower()
+    lead_name = str(row.get('Lead Name or Niche', ''))
+    context = str(row.get('Website or Context', ''))
+    
+    # --- ENGINE A: THE HUNTER (Prospecting for a niche) ---
+    if status == 'prospect':
+        print(f"🕵️‍♂️ Prospecting new leads for: {lead_name}")
         
-        print(f"⚙️ Processing Lead: {lead_name}")
+        prospect_task = Task(
+            description=f"""Search the web for 3 real businesses that match this niche: '{lead_name}' in the location/context: '{context}'.
+            For each business, find their official website.
+            RULES: You MUST format your exact output as 3 distinct lines, separated by a pipe (|), like this:
+            [Company Name] | [Website URL] | [1-sentence description of what they do]""",
+            expected_output="3 lines of text, each containing Company | URL | Description.",
+            agent=prospector
+        )
         
-        # Create a specific task for this lead
+        crew = Crew(agents=[prospector], tasks=[prospect_task], process=Process.sequential)
+        result = crew.kickoff()
+        
+        new_rows = []
+        for line in result.raw.split('\n'):
+            if '|' in line:
+                parts = line.split('|')
+                if len(parts) >= 2:
+                    new_company = parts[0].strip()
+                    new_context = parts[1].strip() + " - " + parts[2].strip() if len(parts) > 2 else parts[1].strip()
+                    new_rows.append([new_company, new_context, "New", "", ""])
+        
+        if new_rows:
+            sheet.append_rows(new_rows)
+            sheet.update_cell(index, 3, "Prospecting Complete")
+            found_leads_count += len(new_rows)
+            print(f"✅ Found {len(new_rows)} new leads for {lead_name}!")
+
+    # --- ENGINE B: THE SNIPER (Researching & Drafting a specific company) ---
+    elif status == 'new':
+        print(f"⚙️ Researching & Drafting Email for: {lead_name}")
+        
         lead_task = Task(
-            description=f"""Analyze the following lead:\nCompany: {lead_name}\nContext/Website: {context}\n
-            1. Extract the key business details and figure out how Jom-Plan can partner with them or offer value.
-            2. Draft a professional, personalized cold email to them.
+            description=f"""Use Google Search to research this specific company: '{lead_name}' (Context/Website: {context}).
+            1. Assess their Viability: Would they benefit from Jom-Plan (an app for personalized travel itineraries)? Why?
+            2. Draft a professional, personalized cold email to them offering a partnership or software integration based on your research.
             
-            RULES:
-            You MUST return your final output exactly in this format with the ||| separator:
-            [Brief paragraph of extracted details and strategy]
+            RULES: Format exactly like this:
+            Viability Assessment: [1 paragraph analyzing why they are a good/bad fit for Jom-Plan]
             |||
             Subject: [Your Subject Line]
             Hi [Name or Team],
-            [Body of email]
+            [Body of email tailored to your research]
             Best,
             Jom-Plan Team""",
-            expected_output="A two-part response separated perfectly by |||",
+            expected_output="Viability assessment and an email draft separated by |||",
             agent=sales_rep
         )
         
-        # Run the crew for this single lead
         crew = Crew(agents=[sales_rep], tasks=[lead_task], process=Process.sequential)
         result = crew.kickoff()
         
-        # Split the output and update the Google Sheet
         try:
             output_parts = result.raw.split('|||')
-            extracted_details = output_parts[0].strip() if len(output_parts) > 0 else "Failed to extract."
+            viability_details = output_parts[0].strip() if len(output_parts) > 0 else "Research failed."
             drafted_email = output_parts[1].strip() if len(output_parts) > 1 else result.raw
             
-            # Update Column C (Status), D (Details), E (Email)
             sheet.update_cell(index, 3, "Drafted")
-            sheet.update_cell(index, 4, extracted_details)
+            sheet.update_cell(index, 4, viability_details)
             sheet.update_cell(index, 5, drafted_email)
-            print(f"✅ Successfully drafted email for {lead_name} and updated CRM.")
-            processed_count += 1
+            drafted_count += 1
+            print(f"✅ Successfully researched and drafted email for {lead_name}.")
         except Exception as e:
             print(f"⚠️ Failed to update row for {lead_name}: {e}")
 
 # 5. Notify the Founder
-if processed_count > 0:
+if drafted_count > 0 or found_leads_count > 0:
     try:
         primary_email = receiver_email.split(',')[0].strip()
         msg = MIMEMultipart()
         msg['From'] = f"Jom-Plan Sales Ops <{sender_email}>" 
         msg['To'] = primary_email 
-        msg['Subject'] = f"✅ Sales Ops: {processed_count} New Leads Drafted"
+        msg['Subject'] = f"✅ Sales Ops: {found_leads_count} Leads Found, {drafted_count} Drafted"
 
         body = f"""
         <html>
           <body style="font-family: Arial, sans-serif; color: #333;">
             <h2>Sales Operations Update</h2>
-            <p>I have successfully researched and drafted highly personalized cold emails for <b>{processed_count}</b> new leads.</p>
-            <p>Please review the <a href="https://docs.google.com/spreadsheets/d/{sales_sheet_id}/edit">Jom-Plan Sales CRM</a>. You can tweak the drafts in Column E and send them out!</p>
+            <p>I scoured the web and found <b>{found_leads_count}</b> new target businesses.</p>
+            <p>I also researched viability and drafted personalized cold emails for <b>{drafted_count}</b> specific leads.</p>
+            <p>Please review your CRM and approve the drafts!</p>
           </body>
         </html>
         """
@@ -113,8 +158,5 @@ if processed_count > 0:
         server.login(sender_email, sender_password) 
         server.sendmail(sender_email, primary_email, msg.as_string()) 
         server.quit()
-        print("📧 Notification email sent to founder.")
     except Exception as e:
         print(f"❌ Failed to send notification email: {e}")
-else:
-    print("No new leads to process today.")

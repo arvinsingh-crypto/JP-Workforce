@@ -90,9 +90,13 @@ result = jom_plan_crew.kickoff()
 
 # 7. Send the Email
 try:
+    # 1. Convert the secret string into a list of emails
+    receiver_list = [email.strip() for email in receiver_email.split(",")]
+    
     msg = MIMEMultipart()
     msg['From'] = f"Jom-Plan CMO <{sender_email}>" 
-    msg['To'] = receiver_email
+    # 2. Join the list back together with commas for the 'To' header in the email
+    msg['To'] = ", ".join(receiver_list) 
     msg['Subject'] = "📈 Your Jom-Plan Marketing Sync & Next Steps"
 
     body = f"""
@@ -108,8 +112,10 @@ try:
     server = smtplib.SMTP('smtp.gmail.com', 587)
     server.starttls()
     server.login(sender_email, sender_password) 
-    server.sendmail(sender_email, receiver_email, msg.as_string()) 
+    # 3. Tell the server to send the message to EVERYONE in the receiver_list
+    server.sendmail(sender_email, receiver_list, msg.as_string()) 
     server.quit()
-    print("✅ CMO Sync Email sent!")
+    print(f"✅ CMO Sync Email sent successfully to: {receiver_list}")
 except Exception as e:
     print(f"❌ Failed to send email: {e}")
+    

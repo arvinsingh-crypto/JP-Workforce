@@ -129,65 +129,35 @@ print("🧠 The C-Suite is analyzing the data...")
 jom_plan_crew = Crew(agents=[engineer, ceo], tasks=[engineering_task, ceo_task], process=Process.sequential)
 result = jom_plan_crew.kickoff()
 
-# --- NEW: STEP 7. THE EMAIL SENDER ---
-print("📧 Drafting and sending the email to the Founder...")
-
+# 7. Send the Email
 try:
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-    import smtplib
-
-    # Construct the email structure
-    msg = MIMEMultipart()
+    # Look at the list, but ONLY grab the first email address (index 0)
+    primary_email = receiver_email.split(',')[0].strip()
     
-    # HARDCODE THE ALIAS HERE (This is what the recipient sees)
-    msg['From'] = "Jom-Plan CEO <jomplanCEO@outsourcee.co>" 
-    msg['To'] = receiver_email
-    msg['Subject'] = "🚀 Jom-Plan Operations Brief: Critical Fixes"
+    msg = MIMEMultipart()
+    msg['From'] = f"Jom-Plan AI C-Suite <{sender_email}>" 
+    
+    # Send it strictly to you
+    msg['To'] = primary_email 
+    msg['Subject'] = "⚙️ Jom-Plan Weekly Engineering & Executive Report"
 
-    # Grab the Engineer's isolated report to put in the appendix
-    engineer_report = engineering_task.output.raw
-
-    # Construct the beautifully formatted HTML email body
     body = f"""
     <html>
-      <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 800px; margin: auto;">
-        
-        <h1 style="color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px;">Jom-Plan Operations Brief</h1>
+      <body style="font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: auto;">
+        <h1 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">Executive Summary</h1>
         {result.raw}
-        
-        <br><br>
-        
-        <div style="background-color: #f8f9fa; border-left: 4px solid #6c757d; padding: 20px; margin-top: 30px;">
-            <h3 style="color: #495057; margin-top: 0;">🔬 Technical Appendix: Engineering Deep-Dive</h3>
-            <p style="font-size: 0.9em; color: #666;">The following is the raw, detailed diagnostic report provided by the Lead Systems Engineer for your review:</p>
-            <div style="font-size: 0.95em;">
-                {engineer_report}
-            </div>
-        </div>
-        
       </body>
     </html>
     """
-    
-    # Attach the HTML body (Notice it says 'html' now, not 'plain')
     msg.attach(MIMEText(body, 'html'))
 
-    # Connect to Gmail's server and send
     server = smtplib.SMTP('smtp.gmail.com', 587)
     server.starttls()
-    
-    # Login using your MAIN account (arvin.singh@...)
     server.login(sender_email, sender_password) 
-    text = msg.as_string()
     
-    # Send the email disguised as the ALIAS
-    server.sendmail("jomplanCEO@outsourcee.co", receiver_email, text) 
+    # Tell the server to email ONLY the primary founder
+    server.sendmail(sender_email, primary_email, msg.as_string()) 
     server.quit()
-    
-    print("✅ HTML Email successfully sent to inbox!")
-
+    print(f"✅ Executive Report sent successfully ONLY to: {primary_email}")
 except Exception as e:
-    print(f"❌ Failed to send email. Error: {e}")
-
-print("\n✅ Process Complete!")
+    print(f"❌ Failed to send email: {e}")

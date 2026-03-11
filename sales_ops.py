@@ -37,19 +37,19 @@ records = sheet.get_all_records()
 pro_llm = LLM(model="gemini/gemini-3.1-pro-preview", api_key=api_key)
 search_tool = SerperDevTool()
 
-# 3. Define the Dual-Engine Sales Team
+# 3. Define the Level 2 Sales Team
 prospector = Agent(
     role="Lead Generation Specialist",
     goal="Find actual, literal businesses that perfectly match the human's requested niche.",
-    backstory="You are a ruthless, highly literal internet researcher. You never assume, you never pivot, and you never guess. If a human asks for 'Hotels', you find literal buildings where people sleep. You never substitute the request with agencies, consultants, or related industries.",
+    backstory="You are a ruthless, highly literal internet researcher. You never assume or guess. If asked for 'Hotels', you find literal buildings where people sleep.",
     tools=[search_tool],
     llm=pro_llm
 )
 
 sales_rep = Agent(
-    role="B2B Sales Operations Specialist",
-    goal="Research specific companies, assess their viability as a Jom-Plan partner, and write highly personalized cold emails.",
-    backstory="You are the elite Sales Ops Lead for Jom-Plan. You deeply research a prospect before reaching out. You assess if they are a good fit (Viability), and your emails are punchy, polite, and strictly focused on solving their specific problems.",
+    role="Senior B2B Sales SDR",
+    goal="Research companies, find the exact decision-maker (GM, Founder, Marketing Director), and write highly personalized cold emails to them.",
+    backstory="You are an elite SDR. You know that emailing 'info@' is a waste of time. You scour the web to find the actual name and role of the person in charge before drafting your highly targeted pitch.",
     tools=[search_tool],
     llm=pro_llm
 )
@@ -62,25 +62,26 @@ print("🔍 Scanning CRM for Tasks...")
 # 4. Loop through the CRM
 for index, row in enumerate(records, start=2):
     status = str(row.get('Status', '')).strip().lower()
-    lead_name = str(row.get('Lead Name or Niche', ''))
-    context = str(row.get('Website or Context', ''))
     
-    # --- ENGINE A: THE HUNTER (Prospecting for a niche) ---
+    # Safely check for the column name whether you used the slash or 'or'
+    lead_name = str(row.get('Lead Name / Niche', row.get('Lead Name or Niche', ''))).strip()
+    context = str(row.get('Website or Location/Context', '')).strip()
+    
+    # --- ENGINE A: THE HUNTER (Now doing 5 at a time) ---
     if status == 'prospect':
         print(f"🕵️‍♂️ Prospecting new leads for: {lead_name}")
         
         prospect_task = Task(
-            description=f"""Search the web for 3 real businesses that perfectly match this literal description: '{lead_name}'. 
+            description=f"""Search the web for 5 real businesses that perfectly match this literal description: '{lead_name}'. 
             Location/Context: '{context}'. 
             
             CRITICAL RULES:
-            1. BE LITERAL: If the requested niche is '{lead_name}', you MUST return exactly that. If it says 'Luxury Hotel', you must return actual hotel brands (e.g., Shangri-La, Ritz-Carlton), NOT travel agencies, NOT tour guides, and NOT booking platforms like Agoda.
+            1. BE LITERAL: You MUST return exactly the niche requested.
             2. GEOGRAPHY: If the Location/Context is blank, default your search strictly to Malaysia.
             
-            For each business, find their official website.
-            Format your exact output as 3 distinct lines, separated by a pipe (|), like this:
+            Format your exact output as 5 distinct lines, separated by a pipe (|), like this:
             [Company Name] | [Website URL] | [1-sentence description of what they do]""",
-            expected_output="3 lines of text, each containing Company | URL | Description.",
+            expected_output="5 lines of text, each containing Company | URL | Description.",
             agent=prospector
         )
         
@@ -94,7 +95,8 @@ for index, row in enumerate(records, start=2):
                 if len(parts) >= 2:
                     new_company = parts[0].strip()
                     new_context = parts[1].strip() + " - " + parts[2].strip() if len(parts) > 2 else parts[1].strip()
-                    new_rows.append([new_company, new_context, "New", "", ""])
+                    # Append 7 columns worth of data so the sheet formatting stays clean
+                    new_rows.append([new_company, new_context, "New", "", "", "", ""])
         
         if new_rows:
             sheet.append_rows(new_rows)
@@ -102,24 +104,30 @@ for index, row in enumerate(records, start=2):
             found_leads_count += len(new_rows)
             print(f"✅ Found {len(new_rows)} new leads for {lead_name}!")
 
-    # --- ENGINE B: THE SNIPER (Researching & Drafting a specific company) ---
+    # --- ENGINE B: THE SNIPER (Now hunting for specific humans) ---
     elif status == 'new':
-        print(f"⚙️ Researching & Drafting Email for: {lead_name}")
+        print(f"⚙️ Researching Decision Makers & Drafting for: {lead_name}")
         
         lead_task = Task(
-            description=f"""Use Google Search to research this specific company: '{lead_name}' (Context/Website: {context}).
-            1. Assess their Viability: Would they benefit from Jom-Plan (an app for personalized travel itineraries)? Why?
-            2. Draft a professional, personalized cold email to them offering a partnership or software integration based on your research.
+            description=f"""Use Google Search to deeply research this specific company: '{lead_name}' (Context/Website: {context}).
             
-            RULES: Format exactly like this:
-            Viability Assessment: [1 paragraph analyzing why they are a good/bad fit for Jom-Plan]
+            1. VIABILITY: Would they benefit from Jom-Plan (a personalized travel itinerary app)? Why?
+            2. FIND THE HUMAN: Search the web, their "About Us" page, or LinkedIn to find the name of the General Manager, Marketing Director, or Founder.
+            3. DRAFT EMAIL: Write a professional, personalized cold email addressed directly to that specific person.
+            
+            CRITICAL FORMATTING RULE: You MUST format your output exactly like this with the ||| separators:
+            [1 paragraph viability assessment]
+            |||
+            [Name and Role of the decision maker you found. If none found, write "General Manager / Team"]
+            |||
+            [Email address or LinkedIn profile if found. If none found, write "Not found publicly"]
             |||
             Subject: [Your Subject Line]
-            Hi [Name or Team],
+            Hi [Name],
             [Body of email tailored to your research]
             Best,
             Jom-Plan Team""",
-            expected_output="Viability assessment and an email draft separated by |||",
+            expected_output="4 sections separated exactly by |||",
             agent=sales_rep
         )
         
@@ -129,13 +137,17 @@ for index, row in enumerate(records, start=2):
         try:
             output_parts = result.raw.split('|||')
             viability_details = output_parts[0].strip() if len(output_parts) > 0 else "Research failed."
-            drafted_email = output_parts[1].strip() if len(output_parts) > 1 else result.raw
+            contact_name = output_parts[1].strip() if len(output_parts) > 1 else "Not found."
+            contact_info = output_parts[2].strip() if len(output_parts) > 2 else "Not found."
+            drafted_email = output_parts[3].strip() if len(output_parts) > 3 else "Draft failed."
             
             sheet.update_cell(index, 3, "Drafted")
             sheet.update_cell(index, 4, viability_details)
-            sheet.update_cell(index, 5, drafted_email)
+            sheet.update_cell(index, 5, contact_name)
+            sheet.update_cell(index, 6, contact_info)
+            sheet.update_cell(index, 7, drafted_email)
             drafted_count += 1
-            print(f"✅ Successfully researched and drafted email for {lead_name}.")
+            print(f"✅ Successfully researched humans and drafted email for {lead_name}.")
         except Exception as e:
             print(f"⚠️ Failed to update row for {lead_name}: {e}")
 
@@ -153,7 +165,7 @@ if drafted_count > 0 or found_leads_count > 0:
           <body style="font-family: Arial, sans-serif; color: #333;">
             <h2>Sales Operations Update</h2>
             <p>I scoured the web and found <b>{found_leads_count}</b> new target businesses.</p>
-            <p>I also researched viability and drafted personalized cold emails for <b>{drafted_count}</b> specific leads.</p>
+            <p>I also researched decision-makers and drafted highly targeted cold emails for <b>{drafted_count}</b> specific leads.</p>
             <p>Please review your CRM and approve the drafts!</p>
           </body>
         </html>

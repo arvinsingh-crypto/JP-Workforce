@@ -70,7 +70,11 @@ for index, row in enumerate(records, start=2):
         print(f"🕵️‍♂️ Prospecting new leads for: {lead_name}")
         
         prospect_task = Task(
-            description=f"""Search the web for 3 real businesses that match this niche: '{lead_name}' in the location/context: '{context}'.
+            description=f"""Search the web for 3 real businesses that match this niche: '{lead_name}'. 
+            Target Location/Context: '{context}'. 
+            
+            CRITICAL GEOGRAPHY RULE: If the Location/Context is blank or doesn't mention a specific country, you MUST default your search strictly to Malaysia (e.g., Kuala Lumpur, Penang, etc.). Do not return businesses outside of Malaysia unless explicitly asked.
+            
             For each business, find their official website.
             RULES: You MUST format your exact output as 3 distinct lines, separated by a pipe (|), like this:
             [Company Name] | [Website URL] | [1-sentence description of what they do]""",

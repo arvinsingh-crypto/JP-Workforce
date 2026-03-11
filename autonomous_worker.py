@@ -3,6 +3,10 @@ import json
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from crewai import Agent, Task, Crew, Process, LLM
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 # 1. Authenticate the Robot Employee
 try:

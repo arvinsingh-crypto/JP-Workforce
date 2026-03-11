@@ -20,7 +20,7 @@ try:
     print("📥 Downloading SECURE data from Google Sheets...")
     
     # PUT YOUR EXACT SPREADSHEET ID HERE
-    jomplan_sheet_id = "YOUR_SPREADSHEET_ID_HERE" 
+    jomplan_sheet_id = "1WctigP3KR7NB7rGQJ3RtZNAJCcvWeeYsBLd52Osfirg" 
     
     # Open the sheet and grab the data (head=2 skips row 1 instructions)
     sheet = client.open_by_key(jomplan_sheet_id).sheet1

@@ -55,12 +55,12 @@ pro_llm = LLM(model="gemini/gemini-3.1-pro-preview", api_key=api_key)
 
 # 4. Define Workforce
 cmo = Agent(
-    role="Chief Marketing Officer & Accountability Coach",
-    goal="Review the human founder's marketing progress, analyze new user data for trends, and assign the next 3 highly specific social media tasks.",
-    backstory="""You are the CMO of Jom-Plan. Your job is twofold:
-    1. You are an accountability coach. You read the Marketing Tracker to see if the human founder completed the tasks you assigned last time. You praise them for 'Done' tasks and hold them accountable for 'Pending' or 'Skipped' tasks.
-    2. You are a data-driven strategist. You look at the recent Jom-Plan user data to see what locations or foods are trending, and you design social media steps specifically around those trends.
-    You give actionable, step-by-step guidance. Tell the human exactly what image to find, what to post, and where.""",
+    role="Chief Marketing Officer & Beginner Marketing Coach",
+    goal="Guide a founder from zero marketing experience to a fully operational social media engine, adapting based on their progress in the tracker.",
+    backstory="""You are the CMO of Jom-Plan, but you specialize in teaching non-marketers. Your job is twofold:
+    1. Accountability Coach: Read the Marketing Tracker. You must assess the human's stage. If they are just starting, you act as a 101 guide, teaching them the absolute basics of setting up pages step-by-step.
+    2. Strategist: Once the tracker shows their foundational setup is 'Done', you shift to data-driven content strategy, analyzing user trends to suggest specific posts.
+    Always explain the 'why' and the 'how' in simple, transferable terms without jargon.""",
     llm=pro_llm
 )
 
@@ -68,14 +68,19 @@ cmo = Agent(
 marketing_task = Task(
     description=f"""Review the Human's recent marketing progress:\n{tracker_data}\n
     Review the recent Jom-Plan user trends:\n{recent_users}\n
+    
     Write a twice-a-week sync email to the human founder.
     RULES:
     1. Output strictly in HTML (use <h2>, <h3>, <ul>, <li>, <b>). DO NOT use markdown.
-    2. Section 1: <h2>📊 Accountability Review</h2>. Address the human directly. Acknowledge what they completed, respond to their 'Human Notes', and ask about anything marked 'Pending'. (If the tracker is empty, welcome them to the new system).
-    3. Section 2: <h2>🎯 The Next 3 Steps</h2>. Based on the user data trends, assign exactly 3 new social media tasks. 
-    4. For each task, provide: The Platform, The Vibe/Visual needed, The exact Caption to copy-paste, and Hashtags.
+    2. Section 1: <h2>📊 Accountability Review</h2>. Address the human. Acknowledge what they completed and respond to their 'Human Notes'.
+    3. EVALUATE THEIR STAGE:
+       - If the tracker is empty, OR if foundational tasks (like creating an IG/TikTok account, writing a bio, or linking a website) are NOT marked 'Done', proceed to PHASE 1.
+       - If foundational tasks ARE marked 'Done', proceed to PHASE 2.
+    4. Section 2: <h2>🎯 The Next 3 Steps</h2>.
+       - IF PHASE 1 (Foundations): Ignore the user data trends for now. Assign 3 basic setup tasks (e.g., Task 1: Create an Instagram Professional Account. Task 2: Write a High-Converting Bio. Task 3: Set up a Link in Bio). For each task, break down the exact step-by-step instructions on *how* to do it, and explain *why* it matters.
+       - IF PHASE 2 (Content Execution): Analyze the user trends. Give a brief summary of the insights, then assign 3 specific social media posts (Platform, Vibe/Visual, Caption, Hashtags).
     5. Section 3: <h2>📝 Tracker Update Reminder</h2>. Remind the human to copy these 3 tasks into their Google Sheet Tracker and update the status when done.""",
-    expected_output="An HTML email containing an accountability review of past tasks and 3 new, data-driven social media tasks.",
+    expected_output="An HTML email containing an accountability review, and either foundational setup guides (if beginning) or data-driven content tasks (if foundations are done).",
     agent=cmo
 )
 

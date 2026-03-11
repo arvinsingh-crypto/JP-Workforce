@@ -40,8 +40,8 @@ search_tool = SerperDevTool()
 # 3. Define the Dual-Engine Sales Team
 prospector = Agent(
     role="Lead Generation Specialist",
-    goal="Use Google Search to find highly relevant B2B business leads for Jom-Plan based on a broad target niche.",
-    backstory="You are an expert at finding hidden gems on the internet. You search for actual, currently operating businesses, find their official websites, and summarize what they do.",
+    goal="Use Google Search to find businesses that match the EXACT niche requested by the human.",
+    backstory="You are an expert internet researcher working for JomPlan, a personalized travel and itinerary app. When given a target niche, you NEVER guess or assume. You search strictly for that specific industry.",
     tools=[search_tool],
     llm=pro_llm
 )
@@ -70,13 +70,16 @@ for index, row in enumerate(records, start=2):
         print(f"🕵️‍♂️ Prospecting new leads for: {lead_name}")
         
         prospect_task = Task(
-            description=f"""Search the web for 3 real businesses that match this niche: '{lead_name}'. 
-            Target Location/Context: '{context}'. 
+            description=f"""Search the web for 3 real businesses in this EXACT industry/niche: '{lead_name}'. 
+            Location/Context: '{context}'. 
             
-            CRITICAL GEOGRAPHY RULE: If the Location/Context is blank or doesn't mention a specific country, you MUST default your search strictly to Malaysia (e.g., Kuala Lumpur, Penang, etc.). Do not return businesses outside of Malaysia unless explicitly asked.
+            CRITICAL RULES:
+            1. You MUST search for exactly what is requested in the niche: '{lead_name}'. Do NOT search for logistics or generic B2B companies.
+            2. JomPlan is a travel/itinerary platform. Keep that in mind when summarizing what the business does.
+            3. GEOGRAPHY: If the Location/Context is blank, default your search strictly to Malaysia.
             
             For each business, find their official website.
-            RULES: You MUST format your exact output as 3 distinct lines, separated by a pipe (|), like this:
+            Format your exact output as 3 distinct lines, separated by a pipe (|), like this:
             [Company Name] | [Website URL] | [1-sentence description of what they do]""",
             expected_output="3 lines of text, each containing Company | URL | Description.",
             agent=prospector

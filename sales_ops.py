@@ -30,7 +30,7 @@ except Exception as e:
     exit(1)
 
 # 2. Connect to the Sales CRM
-sales_sheet_id = "YOUR_SALES_SPREADSHEET_ID_HERE" 
+sales_sheet_id = "1J0Xy0tBC0-Tp7o-PAQL5F5eMdaAqSjcYQzA0jR2yrus" 
 sheet = client.open_by_key(sales_sheet_id).sheet1
 records = sheet.get_all_records()
 

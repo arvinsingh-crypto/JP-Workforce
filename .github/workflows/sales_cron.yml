@@ -1,0 +1,32 @@
+name: Jom-Plan Sales Ops
+
+on:
+  schedule:
+    # Runs Monday through Friday at 01:00 UTC (9:00 AM MYT)
+    - cron: '0 1 * * 1-5' 
+  workflow_dispatch:
+
+jobs:
+  run-sales-ops:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+        
+      - name: Run Sales Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+          RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+          SALES_GOOGLE_CREDENTIALS_JSON: ${{ secrets.SALES_GOOGLE_CREDENTIALS_JSON }}
+        run: python sales_ops.py
